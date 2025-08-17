@@ -88,26 +88,34 @@ function Chat({ token, OnLogout }: { token: string; OnLogout: () => void }) {
                 style={{
                   fontSize: /^\p{Extended_Pictographic}$/u.test(m.text || '') ? '2.2rem' : '1rem',
                 }}>
-                {m.text}
-              </div>
-            )}
-            {canDelete(m) && (
+                 <div style={{justifyContent : 'space-between', display:'flex',justifyItems:'center',
+                  alignItems:'center'
+                 }}>
+                  {m.text}
+                  {canDelete(m) && (
               <button
+
                 onClick={() => {
                   deleteMSG(m.id);
                 }}
+                className='deleteButton'
                 title="delete"
                 style={{
-                  position: 'absolute',
-                  right: 6,
-                  top: 6,
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
+                 backgroundColor:'transparent',
+                 width: 24,
+                 height: 24,
+                 justifyContent: 'center',
+                 border:'none',
+                 alignItems:'center',
+                 display:'flex'
                 }}>
                 X
               </button>
             )}
+                 </div>
+              </div>
+            )}
+            
             <div className="muted"> {new Date(m.createdAt).toLocaleTimeString()}</div>
           </div>
         ))}
