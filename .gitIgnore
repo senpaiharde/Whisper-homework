@@ -1,0 +1,4 @@
+BREVO_API_KEY=__REPLACE__
+JWT_SECRET=devsecret
+BASE_URL=http://localhost:5173
+SERVER_URL=http://localhost:4000
