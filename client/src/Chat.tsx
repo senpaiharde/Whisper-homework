@@ -20,7 +20,7 @@ function Chat({ token, OnLogout }: { token: string; OnLogout: () => void }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
-
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     (async () => {
       const dataMe = await GetDate<{ email: string }>('/api/me', token);
@@ -29,7 +29,7 @@ function Chat({ token, OnLogout }: { token: string; OnLogout: () => void }) {
       setMessages(res.messages || []);
     })().catch(() => console.error());
 
-    const s = io('http://localhost:4000',{auth : {token}});
+    const s = io('http://localhost:4000', { auth: { token } });
     s.on('message:new', (m: Msg) => {
       setMessages((prev) => [...prev, m]);
 
@@ -45,7 +45,10 @@ function Chat({ token, OnLogout }: { token: string; OnLogout: () => void }) {
   function canDelete(m: Msg) {
     return m.userEmail && m.userEmail === me;
   }
-
+  const listRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' });
+  }, [messages]);
   const onDrop = useCallback(
     async (file: File[]) => {
       if (!file.length) return;
@@ -53,7 +56,6 @@ function Chat({ token, OnLogout }: { token: string; OnLogout: () => void }) {
       try {
         await uploadImage<{ message: Msg }>(file[0], token);
         setError('');
-        
       } catch (e: any) {
         setError(e.message || 'Upload error');
       } finally {
@@ -90,25 +92,48 @@ function Chat({ token, OnLogout }: { token: string; OnLogout: () => void }) {
     if (!file) return;
     const fs = new FormData();
     fs.append('image', file);
-    await fetch('/api/upload', {
-      method: 'POST',
-      headers: {
-        authorization: `Bearer ${token}`,
-      },
-      body: fs,
-    });
+    await uploadImage<{ message: Msg }>(file, token);
     e.target.value = '';
+  }
+  async function onPickCamera(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) {
+      e.target.value = '';
+      return;
+    }
+    setIsUploading(true);
+    try {
+      await uploadImage<{ message: Msg }>(f, token);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsUploading(false);
+      e.target.value = '';
+    }
   }
   return (
     <div
       {...getRootProps()}
       className="container"
       style={{
-        transition: "border .15s ease",
-        border: isDragActive ? '2px dashed #4f46e5' : '2px dashed transparent' }}>
-           <input {...getInputProps()} />
+        transition: 'border .15s ease',
+        border: isDragActive ? '2px dashed #4f46e5' : '2px dashed transparent',
+      }}>
+      <input {...getInputProps({ capture: 'environment' as any })} />
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={onPickCamera}
+        style={{ display: 'none' }}
+      />
+      {error && <div style={{ color: 'crimson', padding: 8, marginTop: 8 }}>{error}</div>}
       <h2>General</h2>
-      <div className="card" style={{ height: 420, overflowY: 'auto', marginBottom: 12 }}>
+      <div
+        ref={listRef}
+        className="card"
+        style={{ height: 420, overflowY: 'auto', marginBottom: 12 }}>
         {messages.map((m) => (
           <div key={m.id} style={{ marginBottom: 10 }}>
             <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 4 }}>
@@ -163,6 +188,9 @@ function Chat({ token, OnLogout }: { token: string; OnLogout: () => void }) {
       </div>
 
       <div className="row">
+        <button type="button" onClick={() => cameraInputRef.current?.click()} title="Open camera">
+          Camera
+        </button>
         <input
           placeholder="Type a message..."
           value={text}
