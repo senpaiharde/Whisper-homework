@@ -60,11 +60,13 @@ function Login({ onAuthed }: { onAuthed: (token: string) => void }) {
             />
           </>
         )}
+
         <button
           onClick={stage === 'request' ? requestOtp : verifyOtp}
           disabled={!email || (stage === 'verify' && otp.length !== 6)}>
           {stage === 'request' ? 'requestOtp' : 'Verify'}
         </button>
+        {stage === 'verify' && <button onClick={() => setStage('request')}>Back</button>}
         {msg && <p style={{ color: 'crimson' }}>{msg}</p>}
         <p className="muted" style={{ marginTop: 8 }}>
           Dev mode: OTP is printed in server console.

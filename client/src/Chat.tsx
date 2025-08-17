@@ -77,7 +77,10 @@ function Chat({ token, OnLogout }: { token: string; OnLogout: () => void }) {
       <div className="card" style={{ height: 420, overflowY: 'auto', marginBottom: 12 }}>
         {messages.map((m, idx) => (
           <div key={idx} style={{ marginBottom: 10 }}>
-            <div style={{fontSize : 12, opacity : 0.7, marginBlock : 4}}></div>
+             <div style={{ fontSize:12, opacity:0.7, marginBottom:4 }}>
+              {m.userEmail === me ? 'You' : (m.userEmail || "Unknown")}
+              {" * " }{new Date(m.createdAt).toLocaleDateString()}
+             </div>
             {m.kind === 'IMAGE' ? (
               <img className="msg-img" src={m.imageUrl} alt="" />
             ) : (
