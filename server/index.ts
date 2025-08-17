@@ -6,27 +6,76 @@ import multer from 'multer';
 import path from 'path';
 import { Server } from 'socket.io';
 import { PrismaClient } from '@prisma/client';
-
+import fs from 'fs';
 import { requireAuth } from './auth.js';
 import { rateLimit } from './rateLimiter.js';
 import { requestSchema, verifySchema, createAndStoreOtp, verifyOtp, signJWT } from './auth.js';
 import { sendBrevo } from './email.js';
 import { includes } from 'zod/v4';
-
+import jwt from 'jsonwebtoken';
 // init
 const prisma = new PrismaClient();
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
+const io = new Server(server, { cors: { origin: 'http://localhost:5173' } });
+
 const PORT = Number(process.env.SERVER_PORT || 4000);
 server.listen(PORT, () => console.log(`🚀  Server running on http://localhost:${PORT}`));
 // file uploads
-const upload = multer({ dest: path.join(process.cwd(), 'uploads') });
+const UP = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(UP)) fs.mkdirSync(UP, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, UP),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+  }
+});
+const upload = multer({
+  storage,
+  fileFilter: (_req, file, cb) => {
+    const ok = ['image/png','image/jpeg','image/webp','image/gif','image/jpg'].includes(file.mimetype);
+    cb(ok ? null as any : new Error('invalid-mime'), ok);
+  },
+  limits: { fileSize: 8 * 1024 * 1024 }
+});
 
 // middleware
 app.use(cors());
 
 app.use(express.json());
+
+
+io.use((socket, next) => {
+  try {
+    const token = socket.handshake.auth?.token;
+    if (!token) return next(new Error('no-token'));
+    const payload = jwt.verify(token, process.env.JWT_SECRET!);
+    (socket as any).userEmail = (payload as any).sub;
+    next();
+  } catch {
+    next(new Error('bad-token'));
+  }
+});
+
+io.on('connection', (s) => {
+  console.log('socket ok:', (s as any).userEmail, s.id);
+});
+
+const msgBucket = new Map<string, number[]>();
+function canSendNow(email: string) {
+  const now = Date.now();
+  const arr = msgBucket.get(email) || [];
+  const kept = arr.filter((t) => now - t < 5000);
+  if (kept.length >= 8) {
+    msgBucket.set(email, kept);
+    return false;
+  }
+  kept.push(now);
+  msgBucket.set(email, kept);
+  return true;
+}
 
 // Health check
 app.get('/health', (_req, res) => res.json({ ok: true }));
@@ -107,6 +156,8 @@ app.post('/api/messages', requireAuth, async (req, res) => {
 // POST /api/upload
 app.post('/api/upload', requireAuth, upload.single('image'), async (req, res) => {
   const email = (req as any).userEmail as string;
+
+  if (!canSendNow(email)) return res.status(429).json({ error: 'Slow down' });
   const { chat, user } = await getOrCreateUserAndChat(email);
   const file = (req as any).file as Express.Multer.File | undefined;
   if (!file) return res.status(400).json({ error: 'No file' });
@@ -136,6 +187,7 @@ app.get('/api/me', requireAuth, (req, res) => {
 // GET /api/messages
 app.get('/api/messages', requireAuth, async (req, res) => {
   const email = (req as any).userEmail as string;
+  if (!canSendNow(email)) return res.status(429).json({ error: 'Slow down' });
   const { chat } = await getOrCreateUserAndChat(email);
 
   const rows = await prisma.message.findMany({

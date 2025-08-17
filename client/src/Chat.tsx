@@ -29,13 +29,13 @@ function Chat({ token, OnLogout }: { token: string; OnLogout: () => void }) {
       setMessages(res.messages || []);
     })().catch(() => console.error());
 
-    const s = io('http://localhost:4000');
+    const s = io('http://localhost:4000',{auth : {token}});
     s.on('message:new', (m: Msg) => {
       setMessages((prev) => [...prev, m]);
 
       audioRef.current?.play().catch(() => {});
     });
-    s.on('message:delete', ({ id }: { id: string }) =>
+    s.on('message:deleted', ({ id }: { id: string }) =>
       setMessages((ms) => ms.filter((m) => m.id !== id))
     );
     return () => {
@@ -51,9 +51,9 @@ function Chat({ token, OnLogout }: { token: string; OnLogout: () => void }) {
       if (!file.length) return;
       setIsUploading(true);
       try {
-        const res = await uploadImage<{ message: Msg }>(file[0], token);
+        await uploadImage<{ message: Msg }>(file[0], token);
         setError('');
-        setMessages((m) => [...m, res.message]);
+        
       } catch (e: any) {
         setError(e.message || 'Upload error');
       } finally {
@@ -109,8 +109,8 @@ function Chat({ token, OnLogout }: { token: string; OnLogout: () => void }) {
            <input {...getInputProps()} />
       <h2>General</h2>
       <div className="card" style={{ height: 420, overflowY: 'auto', marginBottom: 12 }}>
-        {messages.map((m, idx) => (
-          <div key={idx} style={{ marginBottom: 10 }}>
+        {messages.map((m) => (
+          <div key={m.id} style={{ marginBottom: 10 }}>
             <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 4 }}>
               {m.userEmail === me ? 'You' : m.userEmail || 'Unknown'}
               {' *  '}
