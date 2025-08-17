@@ -158,7 +158,7 @@ app.get('/api/messages', requireAuth, async (req, res) => {
 
 /// delete section11
 
-app.delete('/api/message/:id', requireAuth, async (req, res) => {
+app.delete('/api/messages/:id', requireAuth, async (req, res) => {
   const email = (req as any).userEmail as string;
   const user = await prisma.user.findUnique({ where: { email } });
   const msg = await prisma.message.findUnique({ where: { id: req.params.id } });

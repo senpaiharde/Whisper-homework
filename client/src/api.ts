@@ -38,5 +38,24 @@ export async function DeleteDate<T>(url: string, token: string): Promise<T> {
       throw new Error(txt || `HTTP ${r.status}`);
     }
   }
-  return txt ? JSON.parse(txt) : ({} as T)
+  return txt ? JSON.parse(txt) : ({} as T);
+}
+
+export async function uploadImage<T = { message: any }>(file: File, token: string): Promise<T> {
+  const fd = new FormData();
+  fd.append('image', file);
+  const r = await fetch('/api/upload', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` }, 
+    body: fd,
+  });
+  const txt = await r.text();
+  if (!r.ok) {
+    try {
+      throw new Error(JSON.parse(txt).error);
+    } catch {
+      throw new Error(txt || `HTTP ${r.status}`);
+    }
+  }
+  return txt ? JSON.parse(txt) : ({} as T);
 }

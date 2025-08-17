@@ -1,7 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { DeleteDate, GetDate, postDate } from './api.js';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { DeleteDate, GetDate, postDate, uploadImage } from './api.js';
 import { io } from 'socket.io-client';
-
+import './styles/styles.css';
+import { useDropzone } from 'react-dropzone';
 type Msg = {
   id: string;
   kind: 'TEXT' | 'IMAGE' | string;
@@ -17,6 +18,8 @@ function Chat({ token, OnLogout }: { token: string; OnLogout: () => void }) {
   const [text, setText] = useState('');
   const [me, setMe] = useState<string>('');
   const audioRef = useRef<HTMLAudioElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -42,6 +45,31 @@ function Chat({ token, OnLogout }: { token: string; OnLogout: () => void }) {
   function canDelete(m: Msg) {
     return m.userEmail && m.userEmail === me;
   }
+
+  const onDrop = useCallback(
+    async (file: File[]) => {
+      if (!file.length) return;
+      setIsUploading(true);
+      try {
+        const res = await uploadImage<{ message: Msg }>(file[0], token);
+        setError('');
+        setMessages((m) => [...m, res.message]);
+      } catch (e: any) {
+        setError(e.message || 'Upload error');
+      } finally {
+        setIsUploading(false);
+      }
+    },
+    [token]
+  );
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    accept: { 'image/*': [] },
+    multiple: false,
+    noClick: true,
+    noKeyboard: true,
+    onDrop,
+  });
   async function deleteMSG(id: string) {
     try {
       await DeleteDate(`/api/messages/${id}`, token);
@@ -72,51 +100,64 @@ function Chat({ token, OnLogout }: { token: string; OnLogout: () => void }) {
     e.target.value = '';
   }
   return (
-    <div className="container">
+    <div
+      {...getRootProps()}
+      className="container"
+      style={{
+        transition: "border .15s ease",
+        border: isDragActive ? '2px dashed #4f46e5' : '2px dashed transparent' }}>
+           <input {...getInputProps()} />
       <h2>General</h2>
       <div className="card" style={{ height: 420, overflowY: 'auto', marginBottom: 12 }}>
         {messages.map((m, idx) => (
           <div key={idx} style={{ marginBottom: 10 }}>
-             <div style={{ fontSize:12, opacity:0.7, marginBottom:4 }}>
-              {m.userEmail === me ? 'You' : (m.userEmail || "Unknown")}
-              {" * " }{new Date(m.createdAt).toLocaleDateString()}
-             </div>
+            <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 4 }}>
+              {m.userEmail === me ? 'You' : m.userEmail || 'Unknown'}
+              {' *  '}
+              {new Date(m.createdAt).toLocaleTimeString()}
+            </div>
             {m.kind === 'IMAGE' ? (
-              <img className="msg-img" src={m.imageUrl} alt="" />
+              <div className="lineChat">
+                {' '}
+                <img className="msg-img" src={m.imageUrl} alt="" />
+                {canDelete(m) && (
+                  <button
+                    onClick={() => {
+                      deleteMSG(m.id);
+                    }}
+                    className="deleteButton"
+                    title="delete">
+                    X
+                  </button>
+                )}
+              </div>
             ) : (
               <div
                 style={{
                   fontSize: /^\p{Extended_Pictographic}$/u.test(m.text || '') ? '2.2rem' : '1rem',
                 }}>
-                 <div style={{justifyContent : 'space-between', display:'flex',justifyItems:'center',
-                  alignItems:'center'
-                 }}>
+                <div
+                  className="lineChat"
+                  style={{
+                    justifyContent: 'space-between',
+                    display: 'flex',
+                    justifyItems: 'center',
+                    alignItems: 'center',
+                  }}>
                   {m.text}
                   {canDelete(m) && (
-              <button
-
-                onClick={() => {
-                  deleteMSG(m.id);
-                }}
-                className='deleteButton'
-                title="delete"
-                style={{
-                 backgroundColor:'transparent',
-                 width: 24,
-                 height: 24,
-                 justifyContent: 'center',
-                 border:'none',
-                 alignItems:'center',
-                 display:'flex'
-                }}>
-                X
-              </button>
-            )}
-                 </div>
+                    <button
+                      onClick={() => {
+                        deleteMSG(m.id);
+                      }}
+                      className="deleteButton"
+                      title="delete">
+                      X
+                    </button>
+                  )}
+                </div>
               </div>
             )}
-            
-            <div className="muted"> {new Date(m.createdAt).toLocaleTimeString()}</div>
           </div>
         ))}
       </div>
@@ -139,6 +180,7 @@ function Chat({ token, OnLogout }: { token: string; OnLogout: () => void }) {
             padding: '8px 10px',
             cursor: 'pointer',
           }}>
+          upload
           <input type="file" accept="image/*" style={{ display: 'none' }} onChange={onPickFile} />
         </label>
         <button onClick={OnLogout}>Logout</button>

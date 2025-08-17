@@ -1,0 +1,22 @@
+.deleteButton{
+    background-color: transparent;
+    width: 24px;
+    height: 24px;
+    justify-content: center;
+    border: none;
+    align-items: center;
+    display: flex;
+
+} 
+
+.deleteButton:hover{
+    cursor: pointer;
+    scale: 120%;
+    color:lightcoral;
+}
+
+.lineChat{
+    justify-content: space-between;
+    display: flex;
+    
+}
