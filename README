@@ -1,0 +1,66 @@
+README
+README
+npm i
+npx prisma generate
+npx prisma migrate dev --name init
+npm run dev
+SERVER_PORT=4000
+JWT_SECRET=devsecret
+ALLOW_DEV_OTP=1
+
+
+
+
+ Homework-Whisper — Realtime Chat (OTP auth + images)
+
+A minimal, production-style chat app built with Vite + React + Socket.IO + Express + Prisma (SQLite).
+Login via email OTP (dev-friendly), send text or images (drag & drop / paste), see realtime updates, and delete your own messages.
+
+ Features
+
+🔐 OTP login → JWT (dev mode supported)
+
+🔄 Realtime messages via Socket.IO
+
+💬 Text messages + 🖼️ image upload (drag & drop, paste)
+
+✅ Auth-protected REST API (/api/*)
+
+🧹 Delete your own messages
+
+🚦 Simple anti-spam rate limit (e.g. 8 messages / 5s per user)
+
+🗂️ SQLite persistence via Prisma; images stored in /uploads
+
+🧰 Dev-friendly email options: Dev OTP return / Ethereal Preview / Brevo (real)
+
+willing to add pagination 
+
+
+Frontend: React 18, Vite, react-dropzone, Socket.IO client
+
+Backend: Express, Socket.IO, Multer (uploads), Prisma (SQLite), Zod, JWT
+
+Email: Brevo (prod) or Nodemailer Ethereal (dev demo)
+
+
+homework-whisper/
+├─ client/
+│  ├─ src/
+│  │  ├─ App.tsx
+│  │  ├─ Chat.tsx
+│  │  ├─ Login.tsx
+│  │  ├─ api.ts
+│  │  └─ styles/
+│  └─ vite.config.ts
+├─ server/
+│  ├─ index.ts
+│  ├─ auth.ts
+│  ├─ rateLimiter.ts
+│  └─ email.ts
+├─ prisma/
+│  ├─ schema.prisma
+│  └─ dev.db           ← SQLite DB (auto-created)
+├─ uploads/            ← image files (runtime)
+├─ .env
+└─ package.json
