@@ -156,7 +156,7 @@ app.get('/api/messages', requireAuth, async (req, res) => {
   res.json({ messages });
 });
 
-/// delete section
+/// delete section11
 
 app.delete('/api/message/:id', requireAuth, async (req, res) => {
   const email = (req as any).userEmail as string;
